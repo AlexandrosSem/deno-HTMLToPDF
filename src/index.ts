@@ -6,7 +6,7 @@ import {
 	Config,
 	readLines,
 } from './common/Dependency.ts';
-
+const PUBLIC_PATH = `${Deno.cwd()}/src/client/public`;
 const CHROME_PATH_PROGRAM = Config.CHROME_PATH_PROGRAM
 	? Config.CHROME_PATH_PROGRAM
 	: '';
@@ -20,12 +20,10 @@ const p = await Deno.run({
 		//'--headless',
 		'--remote-debugging-port=8964',
 		`--user-data-dir=${CHROME_PATH_PROFILE}`,
-		'https://www.google.com',
 	],
 	stdout: 'piped',
 	stderr: 'piped',
 });
-
 // get the ws url from Chrome Output
 async function logChromeOuput() {
 	for await (const line of readLines(p.stderr)) {
@@ -36,23 +34,36 @@ async function logChromeOuput() {
 		}
 	}
 }
-
 const ws = await logChromeOuput();
-console.log(ws);
-
 if (ws) {
 	const browser = await Puppeteer.connect({
 		browserWSEndpoint: ws,
 		ignoreHTTPSErrors: true,
 	});
-
-	const page = (await browser.pages())[0];
-	await page.goto('https://github.com/');
-	// do whatever you want
+	const textHTML = await Deno.readTextFile(`${PUBLIC_PATH}/index.html`);
+	const page = await browser.newPage();
+	await page.setContent(textHTML);
+	/*
+	await page.emulateMedia('screen'); // use screen media
+	await page.pdf({
+		// generate pdf
+		path: `${PUBLIC_PATH}/index.pdf`,
+		displayHeaderFooter: true,
+		printBackground: true,
+		format: 'A4',
+		margin: {
+			left: '0px',
+			top: '0px',
+			right: '0px',
+			bottom: '0px',
+		},
+	});
+	*/
+	//await browser.close();
 }
 
+/*
 const PORT = 8080;
-const PUBLIC_PATH = `${Deno.cwd()}/src/client/public`;
 const getFullPath = (pPath: string) => `${PUBLIC_PATH}/${pPath}`;
 const router = new OakRouter();
 router.get('/', async (context) => {
@@ -66,3 +77,4 @@ app.use(router.routes());
 app.use(router.allowedMethods());
 console.log(`Listening on port ${PORT}...`);
 await app.listen({ port: PORT });
+*/
