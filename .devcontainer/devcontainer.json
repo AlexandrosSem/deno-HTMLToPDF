@@ -22,7 +22,8 @@
 		"alefragnani.bookmarks",
 		"xabikos.javascriptsnippets",
 		"coenraads.bracket-pair-colorizer",
-		"eamodio.gitlens"
+		"eamodio.gitlens",
+		"mikestead.dotenv"
 	],
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
