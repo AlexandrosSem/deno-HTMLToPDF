@@ -1,10 +1,14 @@
-import Puppeteer from 'https://esm.sh/puppeteer-core/lib/esm/puppeteer/web.js';
-import { readLines } from 'https://deno.land/std/io/mod.ts';
-import { Application, Router, send } from 'https://deno.land/x/oak/mod.ts';
+import * as Arcsecond from 'https://raw.githubusercontent.com/francisrstokes/arcsecond/master/index.mjs';
+import jspdf from 'https://esm.sh/jspdf/dist/jspdf.node.js';
+import {
+	Application,
+	Router,
+	send,
+	Context,
+} from 'https://deno.land/x/oak/mod.ts';
 export {
 	Application as OakApplication,
 	Router as OakRouter,
 	send as OakSend,
-	Puppeteer,
-	readLines,
+	Context as OakContext,
 };

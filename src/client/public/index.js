@@ -1,3 +1,3 @@
-/*
-    Empty script for now
-*/
+window.addEventListener('load', () => {
+	console.log('Running!');
+});
