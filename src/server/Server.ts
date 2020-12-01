@@ -1,4 +1,5 @@
 import { OakContext, OakApplication, OakRouter } from '../common/Dependency.ts';
+import { MDParser } from './MarkdownParser.ts';
 
 enum Method {
 	Convert = 'convert',
@@ -9,7 +10,7 @@ type APIParams = {
 };
 
 type ServerInputConvert = {
-	Markdown: object;
+	Markdown: string;
 };
 
 type ServerResponseOK = {
@@ -60,11 +61,11 @@ async function ServerConvert(context: OakContext) {
 			throw new Error('Invalid request');
 		}
 		const rawMarkdown = objInfo.Markdown;
-		//
-		// TODO: Convert markdown
-		//
+		const MDInfo = MDParser.run(rawMarkdown);
 		context.response.body = {
-			Blob: 'This is a test :: ' + JSON.stringify(rawMarkdown),
+			Blob: `This is a test :: ${JSON.stringify(
+				MDInfo
+			)} :: ${rawMarkdown}`,
 		} as ServerResponse;
 	} catch (ex) {
 		context.response.status = 500;
