@@ -30,3 +30,16 @@ const _MDParser = choice([
 ]);
 
 export const MDParser = _MDParser;
+
+/// Maybe using a promise is not the best options here,
+/// but it will allow to change the parse engine quite easy.
+export function RunParser(pText: string): Promise<object> {
+	return new Promise((resolve, reject) => {
+		try {
+			const parsed = _MDParser.run(pText);
+			resolve(parsed);
+		} catch (ex) {
+			reject(ex);
+		}
+	});
+}

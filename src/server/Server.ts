@@ -1,5 +1,5 @@
 import { OakContext, OakApplication, OakRouter } from '../common/Dependency.ts';
-import { MDParser } from './MarkdownParser.ts';
+import { RunParser } from './MDParserArcsecond.ts';
 
 enum Method {
 	Convert = 'convert',
@@ -61,7 +61,7 @@ async function ServerConvert(context: OakContext) {
 			throw new Error('Invalid request');
 		}
 		const rawMarkdown = objInfo.Markdown;
-		const MDInfo = MDParser.run(rawMarkdown);
+		const MDInfo = await RunParser(rawMarkdown);
 		context.response.body = {
 			Blob: `This is a test :: ${JSON.stringify(
 				MDInfo
