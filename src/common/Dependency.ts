@@ -1,4 +1,5 @@
 import * as Arcsecond from 'https://raw.githubusercontent.com/francisrstokes/arcsecond/master/index.mjs';
+import Parsimmon from 'https://esm.sh/parsimmon';
 import jspdf from 'https://esm.sh/jspdf/dist/jspdf.node.js';
 import {
 	Application,
@@ -12,4 +13,5 @@ export {
 	send as OakSend,
 	Context as OakContext,
 	Arcsecond,
+	Parsimmon,
 };

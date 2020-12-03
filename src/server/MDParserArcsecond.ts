@@ -1,5 +1,4 @@
 import { Arcsecond } from '../common/Dependency.ts';
-
 const {
 	choice,
 	sequenceOf,
@@ -21,8 +20,15 @@ const _ParseHeader1 = sequenceOf([str('# ').map(() => '#'), parseText]);
 const _ParseHeader2 = sequenceOf([str('## ').map(() => '##'), parseText]);
 const _ParseHeader3 = sequenceOf([str('### ').map(() => '###'), parseText]);
 const _ParseHeader4 = sequenceOf([str('#### ').map(() => '####'), parseText]);
+const _ParseHeader5 = sequenceOf([str('##### ').map(() => '#####'), parseText]);
+const _ParseHeader6 = sequenceOf([
+	str('###### ').map(() => '######'),
+	parseText,
+]);
 
 const _MDParser = choice([
+	_ParseHeader6,
+	_ParseHeader5,
 	_ParseHeader4,
 	_ParseHeader3,
 	_ParseHeader2,
