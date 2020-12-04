@@ -1,9 +1,9 @@
 import { Parsimmon } from '../common/Dependency.ts';
-const parseText = (pParser: any) => {
-	return Parsimmon.alt(pParser.parseEscape, Parsimmon.any)
+const parseText = (pParser: any) =>
+	Parsimmon.alt(pParser.parseEscape, Parsimmon.any)
 		.many()
 		.map((x: any) => x.join(''));
-};
+
 const tParser: Parsimmon.Language = Parsimmon.createLanguage({
 	value: (pParser: any) => {
 		return Parsimmon.alt(
@@ -19,70 +19,53 @@ const tParser: Parsimmon.Language = Parsimmon.createLanguage({
 		return Parsimmon.seqMap(
 			Parsimmon.oneOf('\\'),
 			Parsimmon.any,
-			function (pSlash, pRest) {
-				return pRest;
-			}
+			(pSlash, pRest) => pRest
 		);
 	},
 	header1: (pParser: any) => {
 		return Parsimmon.seq(
-			Parsimmon.seqMap(Parsimmon.string('# '), function (pFirst: string) {
-				return pFirst.trim();
-			}),
+			Parsimmon.seqMap(Parsimmon.string('# '), (pFirst: string) =>
+				pFirst.trim()
+			),
 			parseText(pParser)
 		);
 	},
 	header2: (pParser: any) => {
 		return Parsimmon.seq(
-			Parsimmon.seqMap(
-				Parsimmon.string('## '),
-				function (pFirst: string) {
-					return pFirst.trim();
-				}
+			Parsimmon.seqMap(Parsimmon.string('## '), (pFirst: string) =>
+				pFirst.trim()
 			),
 			parseText(pParser)
 		);
 	},
 	header3: (pParser: any) => {
 		return Parsimmon.seq(
-			Parsimmon.seqMap(
-				Parsimmon.string('### '),
-				function (pFirst: string) {
-					return pFirst.trim();
-				}
+			Parsimmon.seqMap(Parsimmon.string('### '), (pFirst: string) =>
+				pFirst.trim()
 			),
 			parseText(pParser)
 		);
 	},
 	header4: (pParser: any) => {
 		return Parsimmon.seq(
-			Parsimmon.seqMap(
-				Parsimmon.string('#### '),
-				function (pFirst: string) {
-					return pFirst.trim();
-				}
+			Parsimmon.seqMap(Parsimmon.string('#### '), (pFirst: string) =>
+				pFirst.trim()
 			),
 			parseText(pParser)
 		);
 	},
 	header5: (pParser: any) => {
 		return Parsimmon.seq(
-			Parsimmon.seqMap(
-				Parsimmon.string('##### '),
-				function (pFirst: string) {
-					return pFirst.trim();
-				}
+			Parsimmon.seqMap(Parsimmon.string('##### '), (pFirst: string) =>
+				pFirst.trim()
 			),
 			parseText(pParser)
 		);
 	},
 	header6: (pParser: any) => {
 		return Parsimmon.seq(
-			Parsimmon.seqMap(
-				Parsimmon.string('###### '),
-				function (pFirst: string) {
-					return pFirst.trim();
-				}
+			Parsimmon.seqMap(Parsimmon.string('###### '), (pFirst: string) =>
+				pFirst.trim()
 			),
 			parseText(pParser)
 		);
