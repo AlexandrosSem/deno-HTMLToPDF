@@ -7,19 +7,24 @@ const tParser: Parsimmon.Language = Parsimmon.createLanguage({
 			pParser.header4,
 			pParser.header3,
 			pParser.header2,
-			pParser.header1
-		);
+			pParser.header1,
+			pParser.parseBold,
+			pParser.parseItalic,
+			pParser.parseText
+		).many();
 	},
 	parseEscape() {
-		return Parsimmon.seqMap(
-			Parsimmon.oneOf('\\'),
-			Parsimmon.any,
-			(pSlash, pRest) => pRest
-		);
+		return Parsimmon.regexp(/\\(.)/, 1);
+	},
+	parseDigitLetterWhitespace() {
+		return Parsimmon.regexp(/(\d|[a-zA-Z]|\s)/, 1);
 	},
 	parseText(pParser: any) {
-		return Parsimmon.alt(pParser.parseEscape, Parsimmon.any)
-			.many()
+		return Parsimmon.alt(
+			pParser.parseEscape,
+			pParser.parseDigitLetterWhitespace
+		)
+			.atLeast(1)
 			.map((x: any) => x.join(''));
 	},
 	header1(pParser: any) {
@@ -70,6 +75,23 @@ const tParser: Parsimmon.Language = Parsimmon.createLanguage({
 			pParser.parseText
 		);
 	},
+	parseItalic(pParser: any) {
+		return Parsimmon.seq(
+			Parsimmon.string('*'),
+			pParser.parseText,
+			Parsimmon.string('*')
+		);
+	},
+	parseBold(pParser: any) {
+		return Parsimmon.seq(
+			Parsimmon.string('**'),
+			pParser.parseText,
+			Parsimmon.string('**')
+		);
+	},
 });
-const testText = `\# dsdsdsdsd`;
-console.log(tParser.value.parse(testText));
+console.log(tParser.value.parse(` *344sdfsd \\fdfsdfsdfsd44*    `));
+console.log(tParser.value.parse(`*344sdfsdfdfsdfsdfsd44*    *sdfdfsfs*`));
+console.log(tParser.value.parse(`**344sdfsd fdfsdfsdfsd44**`));
+console.log(tParser.value.parse(`*344sdfs**df**dfsdfsdfsd44*`));
+console.log(tParser.value.parse(`**344sdfs*df*dfsdfsdfsd44**`));
