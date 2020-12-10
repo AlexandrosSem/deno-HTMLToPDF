@@ -1,22 +1,30 @@
 import { Parsimmon } from '../common/Dependency.ts';
-const buildParseItalic = (pParser: any, pChar: string): any => {
-	return Parsimmon.seq(
-		Parsimmon.string(pChar),
-		Parsimmon.alt(
-			buildParseBold(pParser, pChar),
-			pParser.parseText
-		).atLeast(1),
-		Parsimmon.string(pChar)
+const buildParseItalic = (pParser: any, pParseContent: any): any => {
+	return Parsimmon.alt(
+		Parsimmon.seq(
+			Parsimmon.string('*'),
+			pParseContent,
+			Parsimmon.string('*')
+		),
+		Parsimmon.seq(
+			Parsimmon.string('_'),
+			pParseContent,
+			Parsimmon.string('_')
+		)
 	);
 };
-const buildParseBold = (pParser: any, pChar: string): any => {
-	return Parsimmon.seq(
-		Parsimmon.string(pChar),
-		Parsimmon.alt(
-			buildParseItalic(pParser, pChar),
-			pParser.parseText
-		).atLeast(1),
-		Parsimmon.string(pChar)
+const buildParseBold = (pParser: any, pParseContent: any): any => {
+	return Parsimmon.alt(
+		Parsimmon.seq(
+			Parsimmon.string('**'),
+			pParseContent,
+			Parsimmon.string('**')
+		),
+		Parsimmon.seq(
+			Parsimmon.string('__'),
+			pParseContent,
+			Parsimmon.string('__')
+		)
 	);
 };
 
@@ -37,14 +45,11 @@ const tParser: Parsimmon.Language = Parsimmon.createLanguage({
 	parseEscape() {
 		return Parsimmon.regexp(/\\(.)/, 1);
 	},
-	parseDigitLetterWhitespace() {
-		return Parsimmon.regexp(/(\d|[a-zA-Z]|\s)/, 1);
+	parseAnyExceptCrucial() {
+		return Parsimmon.regexp(/([^\\#*_])/, 1);
 	},
 	parseText(pParser: any) {
-		return Parsimmon.alt(
-			pParser.parseEscape,
-			pParser.parseDigitLetterWhitespace
-		)
+		return Parsimmon.alt(pParser.parseEscape, pParser.parseAnyExceptCrucial)
 			.atLeast(1)
 			.map((x: any) => x.join(''));
 	},
@@ -97,15 +102,15 @@ const tParser: Parsimmon.Language = Parsimmon.createLanguage({
 		);
 	},
 	parseItalic(pParser: any) {
-		return Parsimmon.alt(
-			buildParseItalic(pParser, '*'),
-			buildParseItalic(pParser, '_')
+		return buildParseItalic(
+			pParser,
+			Parsimmon.alt(pParser.parseBold, pParser.parseText).atLeast(1)
 		);
 	},
 	parseBold(pParser: any) {
-		return Parsimmon.alt(
-			buildParseBold(pParser, '**'),
-			buildParseBold(pParser, '__')
+		return buildParseBold(
+			pParser,
+			Parsimmon.alt(pParser.parseItalic, pParser.parseText).atLeast(1)
 		);
 	},
 });
@@ -124,5 +129,4 @@ console.log(tParser.value.parse('__bold text__'));
 console.log(tParser.value.parse('*sometext \\* test*'));
 console.log(tParser.value.parse('*italic **bold** italic*'));
 console.log(tParser.value.parse('**bold *italic* bold**'));
-// This parse is still a problem...
 console.log(tParser.value.parse('__bold @ text__'));
