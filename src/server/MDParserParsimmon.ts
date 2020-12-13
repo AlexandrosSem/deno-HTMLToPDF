@@ -1,4 +1,29 @@
 import { Parsimmon } from '../common/Dependency.ts';
+interface iTOKEN {
+	H1: any;
+	H2: any;
+	H3: any;
+	H4: any;
+	H5: any;
+	H6: any;
+	Bold1: any;
+	Bold2: any;
+	Italic1: any;
+	Italic2: any;
+}
+
+const TOKEN: iTOKEN = {
+	H1: Parsimmon.oneOf('#'),
+	H2: Parsimmon.string('##'),
+	H3: Parsimmon.string('###'),
+	H4: Parsimmon.string('####'),
+	H5: Parsimmon.string('#####'),
+	H6: Parsimmon.string('######'),
+	Bold1: Parsimmon.string('**'),
+	Bold2: Parsimmon.string('__'),
+	Italic1: Parsimmon.oneOf('*'),
+	Italic2: Parsimmon.oneOf('_'),
+};
 const buildParseItalic = (pParser: any, pParseContent: any): any => {
 	return Parsimmon.alt(
 		Parsimmon.seq(
@@ -39,17 +64,37 @@ const tParser: Parsimmon.Language = Parsimmon.createLanguage({
 			pParser.header1,
 			pParser.parseBold,
 			pParser.parseItalic,
-			pParser.parseText
+			pParser.parseText,
+			pParser.parseRawText
 		).many();
+	},
+	parseTokens() {
+		return Parsimmon.alt(
+			TOKEN.H6,
+			TOKEN.H5,
+			TOKEN.H4,
+			TOKEN.H3,
+			TOKEN.H2,
+			TOKEN.H1,
+			TOKEN.Bold1,
+			TOKEN.Bold2,
+			TOKEN.Italic1,
+			TOKEN.Italic2
+		);
 	},
 	parseEscape() {
 		return Parsimmon.regexp(/\\(.)/, 1);
 	},
-	parseAnyExceptCrucial() {
-		return Parsimmon.regexp(/([^\\#*_])/, 1);
+	parseRawText() {
+		return Parsimmon.regexp(/(.)/, 1)
+			.atLeast(1)
+			.map((x: any) => x.join(''));
 	},
 	parseText(pParser: any) {
-		return Parsimmon.alt(pParser.parseEscape, pParser.parseAnyExceptCrucial)
+		return Parsimmon.alt(
+			pParser.parseEscape,
+			Parsimmon.notFollowedBy(pParser.parseTokens)
+		)
 			.atLeast(1)
 			.map((x: any) => x.join(''));
 	},
@@ -115,13 +160,13 @@ const tParser: Parsimmon.Language = Parsimmon.createLanguage({
 	},
 });
 
-console.log(tParser.value.parse('# test'));
-console.log(tParser.value.parse('## test'));
-console.log(tParser.value.parse('### test'));
-console.log(tParser.value.parse('#### test'));
-console.log(tParser.value.parse('##### test'));
-console.log(tParser.value.parse('###### test'));
-console.log(tParser.value.parse('test test'));
+console.log(tParser.value.parse('# Header 1'));
+console.log(tParser.value.parse('## Header 2'));
+console.log(tParser.value.parse('### Header 3'));
+console.log(tParser.value.parse('#### Header 4'));
+console.log(tParser.value.parse('##### Header 5'));
+console.log(tParser.value.parse('###### Header 6'));
+console.log(tParser.value.parse('Simple text'));
 console.log(tParser.value.parse('*italic text*'));
 console.log(tParser.value.parse('_italic text_'));
 console.log(tParser.value.parse('**bold text**'));
@@ -130,3 +175,12 @@ console.log(tParser.value.parse('*sometext \\* test*'));
 console.log(tParser.value.parse('*italic **bold** italic*'));
 console.log(tParser.value.parse('**bold *italic* bold**'));
 console.log(tParser.value.parse('__bold @ text__'));
+console.log(tParser.value.parse('_italic @ text_'));
+console.log(tParser.value.parse('__bold ~ text__'));
+console.log(tParser.value.parse('_italic £ text_'));
+console.log(tParser.value.parse('_italic \\* text_'));
+console.log(tParser.value.parse('_italic \\_ text_'));
+console.log(tParser.value.parse('#test'));
+console.log(tParser.value.parse('test #test'));
+// This parse is still a problem...
+console.log(tParser.value.parse('_test #test_'));
