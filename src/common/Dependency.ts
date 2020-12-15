@@ -13,5 +13,5 @@ export {
 	send as OakSend,
 	Context as OakContext,
 	Arcsecond,
-	Parsimmon,
+	Parsimmon as P,
 };
