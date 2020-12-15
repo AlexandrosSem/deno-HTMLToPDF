@@ -23,6 +23,7 @@ const tP: P.Language = P.createLanguage({
 			pParser.header1,
 			pParser.parseBold,
 			pParser.parseItalic,
+			pParser.parseCode,
 			pParser.parseText,
 			pParser.parseRawText
 		).many();
@@ -31,7 +32,7 @@ const tP: P.Language = P.createLanguage({
 		return P.regex(/\\(.)/u, 1);
 	},
 	parseAnyExcept() {
-		return P.regex(/[^\\#*_]/u);
+		return P.regex(/[^\\#*_`]/u);
 	},
 	parseRawText() {
 		return P.regex(/./u)
@@ -91,6 +92,16 @@ const tP: P.Language = P.createLanguage({
 			P.alt(pParser.parseItalic, pParser.parseText).atLeast(1)
 		);
 	},
+	parseCode() {
+		return P.alt(
+			P.seq(
+				P.regex(/(`{2})/u),
+				P.regex(/([^`]([`]?[^`])*)/u),
+				P.regex(/(`{2})/u)
+			),
+			P.seq(P.regex(/(`)/u), P.regex(/([^`]*)/u), P.regex(/(`)/u))
+		).atLeast(1);
+	},
 });
 
 console.log(tP.v.parse('# Header 1'));
@@ -115,5 +126,9 @@ console.log(tP.v.parse('_italic \\* text_'));
 console.log(tP.v.parse('_italic \\_ text_'));
 console.log(tP.v.parse('#test'));
 console.log(tP.v.parse('test #test'));
+console.log(tP.v.parse('`test #test`'));
+console.log(tP.v.parse('``test #test``'));
+console.log(tP.v.parse('``test `#test``'));
+console.log(tP.v.parse('``a`a`a``'));
 // This parse is still a problem...
 console.log(tP.v.parse('_test #test_'));
