@@ -1,31 +1,33 @@
+// tP ---> main parser object
+// pP ---> main parser object passed to each property function
 import { P } from '../common/Dependency.ts';
-const buildParseItalic = (pParser: any, pParseContent: any): any => {
+const buildParseItalic = (pContent: any): any => {
 	return P.alt(
-		P.seq(P.string('*'), pParseContent, P.string('*')),
-		P.seq(P.string('_'), pParseContent, P.string('_'))
+		P.seq(P.string('*'), pContent, P.string('*')),
+		P.seq(P.string('_'), pContent, P.string('_'))
 	);
 };
-const buildParseBold = (pParser: any, pParseContent: any): any => {
+const buildParseBold = (pContent: any): any => {
 	return P.alt(
-		P.seq(P.string('**'), pParseContent, P.string('**')),
-		P.seq(P.string('__'), pParseContent, P.string('__'))
+		P.seq(P.string('**'), pContent, P.string('**')),
+		P.seq(P.string('__'), pContent, P.string('__'))
 	);
 };
 
 const tP: P.Language = P.createLanguage({
-	v(pParser: any) {
+	v(pP: any) {
 		return P.alt(
-			pParser.header6,
-			pParser.header5,
-			pParser.header4,
-			pParser.header3,
-			pParser.header2,
-			pParser.header1,
-			pParser.parseBold,
-			pParser.parseItalic,
-			pParser.parseCode,
-			pParser.parseText,
-			pParser.parseRawText
+			pP.parseHeader6,
+			pP.parseHeader5,
+			pP.parseHeader4,
+			pP.parseHeader3,
+			pP.parseHeader2,
+			pP.parseHeader1,
+			pP.parseBold,
+			pP.parseItalic,
+			pP.parseCode,
+			pP.parseText,
+			pP.parseRawText
 		).many();
 	},
 	parseEscape() {
@@ -39,58 +41,52 @@ const tP: P.Language = P.createLanguage({
 			.atLeast(1)
 			.map((x: any) => x.join(''));
 	},
-	parseText(pParser: any) {
-		return P.alt(pParser.parseEscape, pParser.parseAnyExcept)
+	parseText(pP: any) {
+		return P.alt(pP.parseEscape, pP.parseAnyExcept)
 			.atLeast(1)
 			.map((x: any) => x.join(''));
 	},
-	header1(pParser: any) {
+	parseHeader1(pP: any) {
 		return P.seq(
 			P.seqMap(P.string('# '), (pFirst: string) => pFirst.trim()),
-			pParser.parseText.atLeast(1)
+			pP.parseText.atLeast(1)
 		);
 	},
-	header2(pParser: any) {
+	parseHeader2(pP: any) {
 		return P.seq(
 			P.seqMap(P.string('## '), (pFirst: string) => pFirst.trim()),
-			pParser.parseText.atLeast(1)
+			pP.parseText.atLeast(1)
 		);
 	},
-	header3(pParser: any) {
+	parseHeader3(pP: any) {
 		return P.seq(
 			P.seqMap(P.string('### '), (pFirst: string) => pFirst.trim()),
-			pParser.parseText.atLeast(1)
+			pP.parseText.atLeast(1)
 		);
 	},
-	header4(pParser: any) {
+	parseHeader4(pP: any) {
 		return P.seq(
 			P.seqMap(P.string('#### '), (pFirst: string) => pFirst.trim()),
-			pParser.parseText.atLeast(1)
+			pP.parseText.atLeast(1)
 		);
 	},
-	header5(pParser: any) {
+	parseHeader5(pP: any) {
 		return P.seq(
 			P.seqMap(P.string('##### '), (pFirst: string) => pFirst.trim()),
-			pParser.parseText.atLeast(1)
+			pP.parseText.atLeast(1)
 		);
 	},
-	header6(pParser: any) {
+	parseHeader6(pP: any) {
 		return P.seq(
 			P.seqMap(P.string('###### '), (pFirst: string) => pFirst.trim()),
-			pParser.parseText.atLeast(1)
+			pP.parseText.atLeast(1)
 		);
 	},
-	parseItalic(pParser: any) {
-		return buildParseItalic(
-			pParser,
-			P.alt(pParser.parseBold, pParser.parseText).atLeast(1)
-		);
+	parseItalic(pP: any) {
+		return buildParseItalic(P.alt(pP.parseBold, pP.parseText).atLeast(1));
 	},
-	parseBold(pParser: any) {
-		return buildParseBold(
-			pParser,
-			P.alt(pParser.parseItalic, pParser.parseText).atLeast(1)
-		);
+	parseBold(pP: any) {
+		return buildParseBold(P.alt(pP.parseItalic, pP.parseText).atLeast(1));
 	},
 	parseCode() {
 		return P.alt(
