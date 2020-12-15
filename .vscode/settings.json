@@ -1,14 +1,14 @@
 {
-    "deno.enable": true,
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "prettier.tabWidth": 4,
-    "prettier.useTabs": true,
-    "editor.formatOnPaste": false,
-    "editor.formatOnType": false,
-    "editor.formatOnSave": true,
-    "prettier.singleQuote": true,
-    "deno.import_intellisense_origins": {
-        "https://deno.land": true
-    },
-    //"editor.formatOnSaveMode": "modifications",
+	"deno.enable": true,
+	"editor.defaultFormatter": "esbenp.prettier-vscode",
+	"prettier.tabWidth": 4,
+	"prettier.useTabs": true,
+	"prettier.singleQuote": true,
+	"editor.formatOnPaste": false,
+	"editor.formatOnType": false,
+	"editor.formatOnSave": true,
+	"deno.import_intellisense_origins": {
+		"https://deno.land": true
+	}
+	//"editor.formatOnSaveMode": "modifications",
 }

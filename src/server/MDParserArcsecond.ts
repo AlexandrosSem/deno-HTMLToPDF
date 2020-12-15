@@ -17,12 +17,15 @@ const {
 	everyCharUntil,
 	skip,
 	pipeParsers,
+	tapParser,
+	lookAhead,
+	regex,
 } = Arcsecond;
 
 /// debug
-const debugOutput = (type: string) => (x: any) => ({ type: type, value: x });
+const DebugOutput = (type: string) => (x: any) => ({ type: type, value: x });
 
-/// Tokens
+/// Tokens (Only needed because we need the `as keyof iTOKEN` for type-script)
 interface iTOKEN {
 	H1: any;
 	H2: any;
@@ -50,29 +53,20 @@ const TOKEN: iTOKEN = {
 };
 
 /// Builders
-const buildParseHeader = (pNumber: number) => {
-	const parser = TOKEN[`H${pNumber}` as keyof iTOKEN];
-	return pipeParsers([parser, char(' '), parseText]).map(
-		debugOutput(`h${pNumber}`)
+const _Header = (n: number) => {
+	const parser = TOKEN[`H${n}` as keyof iTOKEN];
+	return pipeParsers([parser, char(' '), ParseText]).map(
+		DebugOutput(`h${n}`)
 	);
 };
 
-const buildBetween = (pParser: any) => between(pParser)(pParser);
+const _CharEx = (ex: any) => anyCharExcept(ex).map(DebugOutput('rawCharEx'));
 
-const buildParseBold = (pParser: any) =>
-	choice([
-		buildBetween(TOKEN.Bold1)(pParser),
-		buildBetween(TOKEN.Bold2)(pParser),
-	]);
-
-const buildParseItalic = (pParser: any) =>
-	choice([
-		buildBetween(TOKEN.Italic1)(pParser),
-		buildBetween(TOKEN.Italic2)(pParser),
-	]);
+const _Between = (left: any) => (right: any) => (parse: any) =>
+	sequenceOf([left, parse, right]).map((x: any) => x[1]);
 
 /// Helpers
-const parseTokens = choice([
+const ParseTokens = choice([
 	TOKEN.H6,
 	TOKEN.H5,
 	TOKEN.H4,
@@ -84,55 +78,70 @@ const parseTokens = choice([
 	TOKEN.Italic1,
 	TOKEN.Italic2,
 ]);
-const parseEscape = sequenceOf([char('\\'), anyChar]).map((x: any) => x[1]);
-const parseRawText = many1(anyChar)
+const ParseEscape = sequenceOf([char('\\'), anyChar]).map((x: any) => x[1]);
+const ParseText = many1(choice([ParseEscape, anyCharExcept(ParseTokens)]))
 	.map((x: any) => x.join(''))
-	.map(debugOutput('rawText'));
-const parseText = many1(choice([parseEscape, anyCharExcept(parseTokens)]))
-	.map((x: any) => x.join(''))
-	.map(debugOutput('text'));
+	.map(DebugOutput('text'));
+const ParseRawChar = anyChar.map(DebugOutput('rawChar'));
 
 /// Parsers
-const _ParseH1 = buildParseHeader(1);
-const _ParseH2 = buildParseHeader(2);
-const _ParseH3 = buildParseHeader(3);
-const _ParseH4 = buildParseHeader(4);
-const _ParseH5 = buildParseHeader(5);
-const _ParseH6 = buildParseHeader(6);
+const ParseH1 = _Header(1);
+const ParseH2 = _Header(2);
+const ParseH3 = _Header(3);
+const ParseH4 = _Header(4);
+const ParseH5 = _Header(5);
+const ParseH6 = _Header(6);
 
-const _ParseItalic = buildParseItalic(
-	recursiveParser(() =>
-		many1(choice([_ParseBold, parseText])).map(debugOutput('italic'))
-	)
-);
+const ParseItalic = recursiveParser(() => {
+	const _Row = (edge: any) => {
+		const notSpace = lookAhead(regex(/^[^\s]/));
+		const left = sequenceOf([edge, notSpace]);
+		const right = sequenceOf([notSpace, edge]);
+		return _Between(left)(right)(
+			many1(choice([ParseBold, ParseText, _CharEx(edge)])).map(
+				DebugOutput('italic')
+			)
+		);
+	};
+	return choice([_Row(TOKEN.Italic1), _Row(TOKEN.Italic2)]);
+});
 
-const _ParseBold = buildParseBold(
-	recursiveParser(() =>
-		many1(choice([_ParseItalic, parseText])).map(debugOutput('bold'))
-	)
-);
+const ParseBold = recursiveParser(() => {
+	const _Row = (edge: any) => {
+		const notSpace = lookAhead(regex(/^[^\s]/));
+		const left = sequenceOf([edge, notSpace]);
+		const right = sequenceOf([notSpace, edge]);
+		return _Between(left)(right)(
+			many1(choice([ParseItalic, ParseText, _CharEx(edge)])).map(
+				DebugOutput('bold')
+			)
+		);
+	};
+	return choice([_Row(TOKEN.Bold1), _Row(TOKEN.Bold2)]);
+});
 
-const _MDParser = choice([
-	_ParseH6,
-	_ParseH5,
-	_ParseH4,
-	_ParseH3,
-	_ParseH2,
-	_ParseH1,
-	_ParseBold,
-	_ParseItalic,
-	parseText,
-	parseRawText,
+/// Markdown Parser
+const MDParser = choice([
+	ParseH6,
+	ParseH5,
+	ParseH4,
+	ParseH3,
+	ParseH2,
+	ParseH1,
+	ParseBold,
+	ParseItalic,
+	ParseText,
+	ParseRawChar,
 ]);
 
-const _FinalParser = many1(_MDParser);
+const FinalParser = many1(MDParser);
 
 /// Maybe using a promise is not the best options here,
 /// but it will allow to change the parse engine quite easy.
 export function RunParser(pText: string): Promise<object> {
 	return new Promise((resolve, reject) => {
 		try {
-			const parsed = _FinalParser.run(pText);
+			const parsed = FinalParser.run(pText);
 			resolve(parsed);
 		} catch (ex) {
 			reject(ex);
@@ -141,10 +150,17 @@ export function RunParser(pText: string): Promise<object> {
 }
 
 const testParse = (pString: string) => {
-	const parsed = _FinalParser.run(pString);
+	const parsed = FinalParser.run(pString);
+	const { isError, result } = parsed;
 	const lineLen = 50;
 	console.log(`${pString} ${'-'.repeat(lineLen - (pString.length + 1))}`);
-	console.log(JSON.stringify(parsed, void 0, '  '));
+	if (!isError) {
+		console.log(result);
+		// console.log(JSON.stringify(parsed, void 0, '  '));
+	} else {
+		console.log('ERROR: ');
+		console.log(JSON.stringify(parsed, void 0, '  '));
+	}
 	console.log(`${'-'.repeat(lineLen)}`);
 };
 
@@ -170,5 +186,6 @@ testParse('_italic \\* text_');
 testParse('_italic \\_ text_');
 testParse('#test');
 testParse('test #test');
-// This parse is still a problem...
 testParse('_test #test_');
+// Extreme case (still a problem?! Should be expected?!)
+testParse('text _iii _ text');
