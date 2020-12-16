@@ -26,18 +26,19 @@ const tP: P.Language = P.createLanguage({
 			pP.parseBold,
 			pP.parseItalic,
 			pP.parseCode,
+			pP.parseLinks,
 			pP.parseText,
 			pP.parseRawText
 		).many();
 	},
 	parseEscape() {
-		return P.regex(/\\(.)/u, 1);
+		return P.regex(/\\(.)/, 1);
 	},
 	parseAnyExcept() {
-		return P.regex(/[^\\#*_`]/u);
+		return P.regex(/[^\\#*_`]/);
 	},
 	parseRawText() {
-		return P.regex(/./u)
+		return P.regex(/./)
 			.atLeast(1)
 			.map((x: any) => x.join(''));
 	},
@@ -91,15 +92,37 @@ const tP: P.Language = P.createLanguage({
 	parseCode() {
 		return P.alt(
 			P.seq(
-				P.regex(/(`{2})/u),
-				P.regex(/([^`]([`]?[^`])*)/u),
-				P.regex(/(`{2})/u)
+				P.regex(/(`{2})/),
+				P.regex(/([^`]([`]?[^`])*)/),
+				P.regex(/(`{2})/)
 			),
-			P.seq(P.regex(/(`)/u), P.regex(/([^`]*)/u), P.regex(/(`)/u))
+			P.seq(P.regex(/(`)/), P.regex(/([^`]*)/), P.regex(/(`)/))
+		).atLeast(1);
+	},
+	parseLinks() {
+		return P.seq(
+			P.regex(/[[]/),
+			P.regex(/[^]]+/),
+			P.regex(/[\]]/),
+			P.alt(
+				P.seq(
+					P.regex(/ ?/),
+					P.regex(/[[]/),
+					P.regex(/[^]]+/),
+					P.regex(/[\]]/)
+				),
+				P.seq(
+					P.regex(/\(/),
+					P.regex(/[^ ]+/),
+					P.regex(/( ("([^"]+)"))?/),
+					P.regex(/\)/)
+				)
+			)
 		).atLeast(1);
 	},
 });
 
+/*
 console.log(tP.v.parse('# Header 1'));
 console.log(tP.v.parse('## Header 2'));
 console.log(tP.v.parse('### Header 3'));
@@ -123,8 +146,13 @@ console.log(tP.v.parse('_italic \\_ text_'));
 console.log(tP.v.parse('#test'));
 console.log(tP.v.parse('test #test'));
 console.log(tP.v.parse('`test #test`'));
-console.log(tP.v.parse('``test #test``'));
-console.log(tP.v.parse('``test `#test``'));
-console.log(tP.v.parse('``a`a`a``'));
+//console.log(tP.v.parse('``test #test``'));
+//console.log(tP.v.parse('``test `#test``'));
+//console.log(tP.v.parse('``a`a`a``'));
+*/
+console.log(tP.parseLinks.parse('[aa][aaaa]'));
+console.log(tP.parseLinks.parse('[aa] [aaaa]'));
+console.log(tP.parseLinks.parse('[aa](aaaa)'));
+console.log(tP.parseLinks.parse('[aa](aaaa "z")'));
 // This parse is still a problem...
-console.log(tP.v.parse('_test #test_'));
+//console.log(tP.v.parse('_test #test_'));
