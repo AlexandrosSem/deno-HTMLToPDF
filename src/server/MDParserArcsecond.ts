@@ -37,6 +37,8 @@ interface iTOKEN {
 	Bold2: any;
 	Italic1: any;
 	Italic2: any;
+	Code1: any;
+	Code2: any;
 }
 
 const TOKEN: iTOKEN = {
@@ -50,6 +52,8 @@ const TOKEN: iTOKEN = {
 	Bold2: str('__'),
 	Italic1: char('*'),
 	Italic2: char('_'),
+	Code1: str('``'),
+	Code2: char('`'),
 };
 
 /// Builders
@@ -61,6 +65,10 @@ const _Header = (n: number) => {
 };
 
 const _CharEx = (ex: any) => anyCharExcept(ex).map(DebugOutput('rawCharEx'));
+const _StrEx = (ex: any) =>
+	many1(anyCharExcept(ex))
+		.map((x: any) => x.join(''))
+		.map(DebugOutput('rawStrEx'));
 
 const _Between = (left: any) => (right: any) => (parse: any) =>
 	sequenceOf([left, parse, right]).map((x: any) => x[1]);
@@ -77,6 +85,8 @@ const ParseTokens = choice([
 	TOKEN.Bold2,
 	TOKEN.Italic1,
 	TOKEN.Italic2,
+	TOKEN.Code1,
+	TOKEN.Code2,
 ]);
 const ParseEscape = sequenceOf([char('\\'), anyChar]).map((x: any) => x[1]);
 const ParseText = many1(choice([ParseEscape, anyCharExcept(ParseTokens)]))
@@ -120,6 +130,28 @@ const ParseBold = recursiveParser(() => {
 	return choice([_Row(TOKEN.Bold1), _Row(TOKEN.Bold2)]);
 });
 
+const ParseCode = recursiveParser(() => {
+	const _Row = (edge: any) => {
+		const left = edge;
+		const right = edge;
+		return _Between(left)(right)(
+			many1(choice([ParseText, _CharEx(edge)])).map(DebugOutput('code'))
+		);
+	};
+	return choice([_Row(TOKEN.Code1), _Row(TOKEN.Code2)]);
+});
+
+const ParseImage = recursiveParser(() => {
+	const imgAlt = pipeParsers([
+		char('!'),
+		_Between(char('['))(char(']'))(_StrEx(char(']'))),
+	]).map(DebugOutput('imgAlt'));
+	const imgURI = _Between(char('('))(char(')'))(_StrEx(char(')'))).map(
+		DebugOutput('imgURI')
+	);
+	return sequenceOf([imgAlt, imgURI]).map(DebugOutput('img'));
+});
+
 /// Markdown Parser
 const MDParser = choice([
 	ParseH6,
@@ -130,6 +162,8 @@ const MDParser = choice([
 	ParseH1,
 	ParseBold,
 	ParseItalic,
+	ParseCode,
+	ParseImage,
 	ParseText,
 	ParseRawChar,
 ]);
@@ -149,8 +183,8 @@ export function RunParser(pText: string): Promise<object> {
 	});
 }
 
-const testParse = (pString: string) => {
-	const parsed = FinalParser.run(pString);
+const testParse = (pString: string, pParser?: any) => {
+	const parsed = (pParser ?? FinalParser).run(pString);
 	const { isError, result } = parsed;
 	const lineLen = 50;
 	console.log(`${pString} ${'-'.repeat(lineLen - (pString.length + 1))}`);
@@ -164,28 +198,38 @@ const testParse = (pString: string) => {
 	console.log(`${'-'.repeat(lineLen)}`);
 };
 
-testParse('# Header 1');
-testParse('## Header 2');
-testParse('### Header 3');
-testParse('#### Header 4');
-testParse('##### Header 5');
-testParse('###### Header 6');
-testParse('Simple text');
-testParse('*italic text*');
-testParse('_italic text_');
-testParse('**bold text**');
-testParse('__bold text__');
-testParse('*sometext \\* test*');
-testParse('*italic **bold** italic*');
-testParse('**bold *italic* bold**');
-testParse('__bold @ text__');
-testParse('_italic @ text_');
-testParse('__bold ~ text__');
-testParse('_italic £ text_');
-testParse('_italic \\* text_');
-testParse('_italic \\_ text_');
-testParse('#test');
-testParse('test #test');
-testParse('_test #test_');
-// Extreme case (still a problem?! Should be expected?!)
-testParse('text _iii _ text');
+// testParse('# Header 1');
+// testParse('## Header 2');
+// testParse('### Header 3');
+// testParse('#### Header 4');
+// testParse('##### Header 5');
+// testParse('###### Header 6');
+// testParse('Simple text');
+// testParse('*italic text*');
+// testParse('_italic text_');
+// testParse('**bold text**');
+// testParse('__bold text__');
+// testParse('*sometext \\* test*');
+// testParse('*italic **bold** italic*');
+// testParse('**bold *italic* bold**');
+// testParse('__bold @ text__');
+// testParse('_italic @ text_');
+// testParse('__bold ~ text__');
+// testParse('_italic £ text_');
+// testParse('_italic \\* text_');
+// testParse('_italic \\_ text_');
+// testParse('#test');
+// testParse('test #test');
+// testParse('_test #test_');
+// testParse('`code here`');
+// testParse('``code here``');
+// testParse('``code ` here``');
+// testParse('text *italic* **bold** ``code ` here`` __bold__');
+testParse('![Alt text](/path/to/img.jpg)', ParseImage);
+testParse('![Alt text](/path/to/img.jpg "Optional title")', ParseImage);
+testParse('![Alt text][id]', ParseImage);
+
+// testParse('[an example](http://example.com/ "Title")', ParseLink);
+// testParse('[This link](http://example.net/)', ParseLink);
+// testParse('[an example][id]', ParseLink);
+// testParse('[id]: url/to/image  "Optional title attribute"', ParseReferenceLink);
