@@ -18,7 +18,6 @@
 	"extensions": [
 		"denoland.vscode-deno",
 		"esbenp.prettier-vscode",
-		"tombonnike.vscode-status-bar-format-toggle",
 		"alefragnani.bookmarks",
 		"xabikos.javascriptsnippets",
 		"coenraads.bracket-pair-colorizer",

@@ -64,9 +64,10 @@ const _Header = (n: number) => {
 	);
 };
 
-const _CharEx = (ex: any) => anyCharExcept(ex).map(DebugOutput('rawCharEx'));
+const _CharEx = (ex: any) =>
+	choice([ParseEscape, anyCharExcept(ex)]).map(DebugOutput('rawCharEx'));
 const _StrEx = (ex: any) =>
-	many1(anyCharExcept(ex))
+	many1(choice([ParseEscape, anyCharExcept(ex)]))
 		.map((x: any) => x.join(''))
 		.map(DebugOutput('rawStrEx'));
 
@@ -142,15 +143,69 @@ const ParseCode = recursiveParser(() => {
 });
 
 const ParseImage = recursiveParser(() => {
-	const imgAlt = pipeParsers([
-		char('!'),
-		_Between(char('['))(char(']'))(_StrEx(char(']'))),
-	]).map(DebugOutput('imgAlt'));
-	const imgURI = _Between(char('('))(char(')'))(_StrEx(char(')'))).map(
-		DebugOutput('imgURI')
+	const imgAlt = ((left: any) => (right: any) => {
+		return pipeParsers([
+			char('!'),
+			_Between(left)(right)(_StrEx(right)),
+		]).map(DebugOutput('imgAlt'));
+	})(char('['))(char(']'));
+
+	const imgURI = ((left: any) => (right: any) => {
+		const rightURI = choice([
+			sequenceOf([char(' '), lookAhead(char('"'))]),
+			right,
+		]);
+		return sequenceOf([
+			_Between(left)(rightURI)(_StrEx(rightURI)).map(
+				DebugOutput('imgURI')
+			),
+			possibly(_Between(char('"'))(char('"'))(_StrEx(char('"')))).map(
+				DebugOutput('imgTitle')
+			),
+		]);
+	})(char('('))(char(')'));
+
+	const imgID = ((left: any) => (right: any) => {
+		return _Between(left)(right)(_StrEx(right)).map(DebugOutput('imgID'));
+	})(choice([str(' ['), char('[')]))(char(']'));
+
+	return sequenceOf([imgAlt, choice([imgURI, imgID])]).map(
+		DebugOutput('img')
 	);
-	return sequenceOf([imgAlt, imgURI]).map(DebugOutput('img'));
 });
+
+const ParseLink = recursiveParser(() => {
+	const linkText = ((left: any) => (right: any) => {
+		return _Between(left)(right)(_StrEx(right)).map(
+			DebugOutput('linkText')
+		);
+	})(char('['))(char(']'));
+
+	const linkURI = ((left: any) => (right: any) => {
+		const rightURI = choice([
+			sequenceOf([char(' '), lookAhead(char('"'))]),
+			right,
+		]);
+		return sequenceOf([
+			_Between(left)(rightURI)(_StrEx(rightURI)).map(
+				DebugOutput('linkURI')
+			),
+			possibly(_Between(char('"'))(char('"'))(_StrEx(char('"')))).map(
+				DebugOutput('linkTitle')
+			),
+		]);
+	})(char('('))(char(')'));
+
+	const linkID = ((left: any) => (right: any) => {
+		return _Between(left)(right)(_StrEx(right)).map(DebugOutput('imgID'));
+	})(choice([str(' ['), char('[')]))(char(']'));
+
+	return sequenceOf([linkText, choice([linkURI, linkID])]).map(
+		DebugOutput('link')
+	);
+});
+
+const ParseReference = str('TO-DO');
 
 /// Markdown Parser
 const MDParser = choice([
@@ -164,6 +219,8 @@ const MDParser = choice([
 	ParseItalic,
 	ParseCode,
 	ParseImage,
+	ParseLink,
+	ParseReference,
 	ParseText,
 	ParseRawChar,
 ]);
@@ -183,21 +240,34 @@ export function RunParser(pText: string): Promise<object> {
 	});
 }
 
+const clearConsole = () => {
+	for (let index = 0; index < 50; index++) {
+		console.log('');
+	}
+};
+
+const TEXT_LOG = true;
 const testParse = (pString: string, pParser?: any) => {
+	const dumpObj = (obj: any) =>
+		console.log(JSON.stringify(obj, void 0, '  '));
 	const parsed = (pParser ?? FinalParser).run(pString);
 	const { isError, result } = parsed;
-	const lineLen = 50;
+	const lineLen = 80;
 	console.log(`${pString} ${'-'.repeat(lineLen - (pString.length + 1))}`);
 	if (!isError) {
-		console.log(result);
-		// console.log(JSON.stringify(parsed, void 0, '  '));
+		if (!TEXT_LOG) {
+			console.log(result);
+		} else {
+			dumpObj(parsed);
+		}
 	} else {
 		console.log('ERROR: ');
-		console.log(JSON.stringify(parsed, void 0, '  '));
+		dumpObj(parsed);
 	}
 	console.log(`${'-'.repeat(lineLen)}`);
 };
 
+clearConsole();
 // testParse('# Header 1');
 // testParse('## Header 2');
 // testParse('### Header 3');
@@ -225,11 +295,31 @@ const testParse = (pString: string, pParser?: any) => {
 // testParse('``code here``');
 // testParse('``code ` here``');
 // testParse('text *italic* **bold** ``code ` here`` __bold__');
-testParse('![Alt text](/path/to/img.jpg)', ParseImage);
-testParse('![Alt text](/path/to/img.jpg "Optional title")', ParseImage);
-testParse('![Alt text][id]', ParseImage);
-
-// testParse('[an example](http://example.com/ "Title")', ParseLink);
-// testParse('[This link](http://example.net/)', ParseLink);
+// testParse('![Alt text][id]');
+// testParse('![Alt text] [id]');
+// testParse('![Alt text](/path/to/img.jpg)');
+// testParse('![Alt text](/path/to/img.jpg "Optional title")');
+// testParse('![Alt \\[ \\] text][id]');
+// testParse('![Alt \\[ \\] text] [id]');
+// testParse('![Alt \\[ \\] text](/path/to/img.jpg)');
+// testParse('![Alt \\[ \\] text](/path/to/img.jpg "Optional title")');
+// testParse('![Alt text][i \\[ \\] d]');
+// testParse('![Alt text] [i \\[ \\] d]');
+// testParse('![Alt text](/path/\\[\\ \\]/img.jpg)');
+// testParse('![Alt text](/path/\\[\\ \\]/img.jpg "Optional title")');
+// testParse('![Alt text](/path/to/img.jpg "Optional \\[ \\] title")');
 // testParse('[an example][id]', ParseLink);
-// testParse('[id]: url/to/image  "Optional title attribute"', ParseReferenceLink);
+// testParse('[This link](http://example.net/)', ParseLink);
+// testParse('[an example](http://example.com/ "Title")', ParseLink);
+
+testParse('[id]: url/to/image', ParseReference);
+testParse('[id]: url/to/image "Optional title attribute"', ParseReference);
+// testParse('[id]:  url/to/image', ParseReference);
+// testParse('[id]:   url/to/image', ParseReference);
+// testParse('[id]:    url/to/image', ParseReference);
+// testParse('[id]:	url/to/image', ParseReference);
+// testParse('[id]: url/to/image "Optional title attribute"', ParseReference);
+// testParse('[id]:  url/to/image "Optional title attribute"', ParseReference);
+// testParse('[id]:   url/to/image "Optional title attribute"', ParseReference);
+// testParse('[id]:    url/to/image "Optional title attribute"', ParseReference);
+// testParse('[id]:	url/to/image "Optional title attribute"', ParseReference);
