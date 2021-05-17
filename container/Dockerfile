@@ -6,7 +6,9 @@ RUN usermod -u 1000 deno \
     && groupmod -g 1000 deno \
     && chown deno:deno /deno-dir/ \
     && mkdir -p /home/deno \
+    && mkdir -p /workspace \
     && chown deno:deno /home/deno \
+    && chown deno:deno /workspace \
     && chmod 751 /home/deno \ 
     && rm -rf /usr/local/bin/docker-entrypoint.sh \
     # Install git
