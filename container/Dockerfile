@@ -20,7 +20,7 @@ RUN usermod -u 1000 deno \
 USER deno
 
 # Install denon
-RUN deno install -qAf --unstable https://deno.land/x/denon@2.4.4/denon.ts
+RUN deno install -qAf --unstable https://deno.land/x/denon/denon.ts
 
 WORKDIR /workspace
 ENTRYPOINT []
